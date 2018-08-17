@@ -4,6 +4,8 @@ import React, {Component} from 'react';
 import { NonIdealState } from '@blueprintjs/core';
 
 import AuthenticationDialog from 'src/dialogs/AuthenticationDialog/AuthenticationDialog';
+import { selectSession, selectMetadata } from 'src/selectors';
+
 import './ErrorSection.css';
 
 
@@ -33,7 +35,10 @@ class ErrorSection extends Component {
 
     return (
       <React.Fragment>
-        <AuthenticationDialog auth={metadata.auth} isOpen={this.state.isOpen} toggleDialog={this.onSignIn}/>
+        <AuthenticationDialog auth={metadata.auth}
+                              nextPath={window.location.href}
+                              isOpen={this.state.isOpen}
+                              toggleDialog={this.onSignIn} />
         <div className='ErrorSection'>
           <div className='inner-div'>
             <NonIdealState visual={visual} title={message} description={description} />
@@ -45,7 +50,10 @@ class ErrorSection extends Component {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  return { metadata: state.metadata, session: state.session };
+  return {
+    metadata: selectMetadata(state),
+    session: selectSession(state)
+  };
 };
 
 ErrorSection = connect(mapStateToProps)(ErrorSection);

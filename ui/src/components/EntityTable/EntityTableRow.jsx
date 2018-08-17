@@ -1,15 +1,21 @@
+import _ from 'lodash';
 import React, { Component } from 'react';
 import queryString from 'query-string';
+import { Checkbox } from '@blueprintjs/core';
 
 import { Country, Schema, Collection, Entity, FileSize, Date } from 'src/components/common';
 
-
 class EntityTableRow extends Component {
+
   render() {
-    const { entity, className, location: loc } = this.props;
-    const { hideCollection, documentMode } = this.props;
-    const parsedHash = queryString.parse(loc.hash);
+    const { entity, className, location } = this.props;
+    const { hideCollection, documentMode} = this.props;
+
+    const { updateSelection, selection } = this.props;
+    const selectedIds = _.map(selection || [], 'id');
+    const isSelected = selectedIds.indexOf(entity.id) > -1;
     
+    const parsedHash = queryString.parse(location.hash);
     let rowClassName = (className) ? `${className} nowrap` : 'nowrap';
 
     // Select the current row if the ID of the entity matches the ID of the
@@ -22,8 +28,13 @@ class EntityTableRow extends Component {
     
     return (
       <tr className={rowClassName}>
+        {updateSelection && <td className="select">
+          <Checkbox checked={isSelected} onChange={() => updateSelection(entity)} />
+        </td>}
         <td className="entity">
-          <Entity.Link preview={!documentMode} entity={entity} icon />
+          <Entity.Link preview={!documentMode}
+                       documentMode={documentMode}
+                       entity={entity} icon />
         </td>
         {!hideCollection && 
           <td className="collection">

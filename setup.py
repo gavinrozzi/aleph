@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='aleph',
-    version='2.1.1',
+    version='2.1.5',
     description="Document sifting web frontend",
     long_description="",
     classifiers=[
@@ -28,10 +28,10 @@ setup(
             'emails = aleph.analyze.regex:EMailAnalyzer',
             'phones = aleph.analyze.regex:PhoneNumberAnalyzer',
             'corasick = aleph.analyze.corasick_entity:AhoCorasickEntityAnalyzer',  # noqa
-            'polyglot = aleph.analyze.extract_entity:PolyglotEntityExtractor',
-            'spacy = aleph.analyze.extract_entity:SpacyEntityExtractor',
+            'ner = aleph.analyze.extract_entity:EntityExtractor',
+            'country = aleph.analyze.extract_country:CountryExtractor',
             'ip = aleph.analyze.regex:IPAnalyzer',
-            'iban = aleph.analyze.regex:IBANAnalyzer'
+            'iban = aleph.analyze.regex:IBANAnalyzer',
         ],
         'console_scripts': [
             'aleph = aleph.manage:main',

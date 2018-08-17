@@ -4,13 +4,15 @@ from flask import Blueprint, redirect, send_file, request
 from celestial.types import PDF
 
 from aleph.core import archive, db
-from aleph.model import Document, DocumentRecord
+from aleph.model import Document, DocumentRecord, Audit
 from aleph.logic.documents import update_document, delete_document
 from aleph.logic.collections import update_collection
 from aleph.logic.util import document_url
+from aleph.logic.audit import record_audit
 from aleph.views.cache import enable_cache
 from aleph.views.util import get_db_document, get_index_document
 from aleph.views.util import jsonify, parse_request, sanitize_html
+from aleph.views.util import serialize_data
 from aleph.serializers import RecordSchema
 from aleph.serializers.entities import CombinedSchema, DocumentUpdateSchema
 from aleph.search import DocumentsQuery, RecordsQuery
@@ -50,7 +52,8 @@ def view(document_id):
         data['text'] = document.body_text
     if Document.SCHEMA_IMAGE in document.model.names:
         data['text'] = document.body_text
-    return jsonify(data, schema=CombinedSchema)
+    record_audit(Audit.ACT_ENTITY, id=document_id)
+    return serialize_data(data, CombinedSchema)
 
 
 @blueprint.route('/api/2/documents/<int:document_id>', methods=['POST', 'PUT'])
@@ -69,7 +72,7 @@ def delete(document_id):
     document = get_db_document(document_id, request.authz.WRITE)
     delete_document(document)
     update_collection(document.collection)
-    return jsonify({'status': 'ok'}, status=410)
+    return ('', 204)
 
 
 def _serve_archive(content_hash, file_name, mime_type):
@@ -97,6 +100,7 @@ def _serve_archive(content_hash, file_name, mime_type):
 @blueprint.route('/api/2/documents/<int:document_id>/file')
 def file(document_id):
     document = get_db_document(document_id)
+    record_audit(Audit.ACT_ENTITY, id=document_id)
     resp = _serve_archive(document.content_hash,
                           document.safe_file_name,
                           document.mime_type)
@@ -106,6 +110,7 @@ def file(document_id):
 @blueprint.route('/api/2/documents/<int:document_id>/pdf')
 def pdf(document_id):
     document = get_db_document(document_id)
+    record_audit(Audit.ACT_ENTITY, id=document_id)
     if not document.supports_pages:
         raise BadRequest("PDF is only available for text documents")
     file_name = document.safe_file_name
@@ -119,6 +124,7 @@ def pdf(document_id):
 def records(document_id):
     enable_cache()
     document = get_db_document(document_id)
+    record_audit(Audit.ACT_ENTITY, id=document_id)
     if not document.supports_records:
         raise BadRequest("This document does not have records.")
     result = RecordsQuery.handle(request,
@@ -131,9 +137,10 @@ def records(document_id):
 def record(document_id, index):
     enable_cache()
     document = get_db_document(document_id)
+    record_audit(Audit.ACT_ENTITY, id=document_id)
     if not document.supports_records:
         raise BadRequest("This document does not have records.")
     record = DocumentRecord.by_index(document.id, index)
     if record is None:
         raise NotFound("No such record: %s" % index)
-    return jsonify(record, schema=RecordSchema)
+    return serialize_data(record, RecordSchema)

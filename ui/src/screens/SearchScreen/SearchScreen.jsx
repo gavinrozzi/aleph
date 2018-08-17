@@ -4,6 +4,7 @@ import {withRouter} from 'react-router';
 import queryString from 'query-string';
 import {defineMessages, injectIntl, FormattedNumber, FormattedMessage} from 'react-intl';
 import Waypoint from 'react-waypoint';
+import { Icon } from '@blueprintjs/core';
 
 import Query from 'src/app/Query';
 import { queryEntities } from 'src/actions';
@@ -129,10 +130,11 @@ class SearchScreen extends React.Component {
         icon: 'person'
       }
     ];
-    this.state = {facets: facets};
+    this.state = {facets: facets, hideFacets: false};
 
     this.updateQuery = this.updateQuery.bind(this);
     this.getMoreResults = this.getMoreResults.bind(this);
+    this.toggleFacets = this.toggleFacets.bind(this);
   }
 
   componentDidMount() {
@@ -140,17 +142,13 @@ class SearchScreen extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
-    // Check for a change of query, as unconditionally calling fetchIfNeeded
-    // could cause an infinite loop (if fetching fails).
-    if (!this.props.query.sameAs(prevProps.query)) {
-      this.fetchIfNeeded();
-    }
+    this.fetchIfNeeded();
   }
 
   fetchIfNeeded() {
-    const { result, query, queryEntities } = this.props;
-    if (result.total === undefined && !result.isLoading) {
-      queryEntities({query: query});
+    const { result, query } = this.props;
+    if (result.shouldLoad) {
+      this.props.queryEntities({query: query});
     }
   }
 
@@ -174,9 +172,17 @@ class SearchScreen extends React.Component {
     });
   }
 
+  toggleFacets() {
+    this.setState({hideFacets: !this.state.hideFacets});
+  }
+
   render() {
     const {query, result, intl} = this.props;
+    const {hideFacets} = this.state;
     const title = query.getString('q') || intl.formatMessage(messages.page_title);
+    const hideFacetsClass = hideFacets ? 'show' : 'hide';
+    const plusMinusIcon = hideFacets ? 'minus' : 'plus';
+
     return (
       <Screen query={query} updateQuery={this.updateQuery} title={title}>
         <DualPane className="SearchScreen">
@@ -198,10 +204,18 @@ class SearchScreen extends React.Component {
                 )}
               </span>
             </div>
-            <SearchFacets query={query}
-                          result={result}
-                          updateQuery={this.updateQuery}
-                          facets={this.state.facets}/>
+            <div onClick={this.toggleFacets} className='visible-sm-flex facets total-count pt-text-muted'>
+              <Icon icon={plusMinusIcon} />
+              <span className='total-count-span'>
+                <FormattedMessage id="search.screen.filters" defaultMessage="Filters"/>
+              </span>
+            </div>
+            <div className={hideFacetsClass}>
+              <SearchFacets query={query}
+                            result={result}
+                            updateQuery={this.updateQuery}
+                            facets={this.state.facets}/>
+            </div>
           </DualPane.SidePane>
           <DualPane.ContentPane>
             <SignInCallout/>

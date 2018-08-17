@@ -6,7 +6,7 @@ from aleph.core import db, es, celery
 from aleph.model import Match, Document
 from aleph.index.core import entities_index
 from aleph.index.xref import entity_query
-from aleph.index.util import unpack_result
+from aleph.index.util import unpack_result, search_safe
 
 log = logging.getLogger(__name__)
 
@@ -15,12 +15,15 @@ def _xref_item(item, collection_id=None):
     """Cross-reference an entity or document, given as an indexed document."""
     name = item.get('name') or item.get('title')
     query = entity_query(item, collection_id=collection_id)
-    result = es.search(index=entities_index(),
-                       body={
-                           'query': query,
-                           'size': 10,
-                           '_source': ['collection_id', 'name'],
-                       })
+    if 'match_none' in query:
+        return
+
+    query = {
+        'query': query,
+        'size': 10,
+        '_source': ['collection_id', 'name'],
+    }
+    result = search_safe(index=entities_index(), body=query)
     results = result.get('hits').get('hits')
     entity_id, document_id = None, None
     if Document.SCHEMA in item.get('schemata'):
@@ -56,12 +59,12 @@ def xref_collection(collection_id, other_id=None):
     query = {'term': {'collection_id': collection_id}}
     query = {
         'query': query,
-        '_source': {'excludes': ['text', 'properties.*']}
+        '_source': {'excludes': ['text', 'roles', 'properties.*']}
     }
     scanner = scan(es,
                    index=entities_index(),
                    query=query,
                    scroll='1400m')
-    for idx, res in enumerate(scanner):
+    for res in scanner:
         res = unpack_result(res)
         _xref_item(res, collection_id=other_id)

@@ -100,12 +100,12 @@ OAUTH = env_bool('OAUTH', False)
 OAUTH_NAME = env('OAUTH_NAME', 'google')
 OAUTH_KEY = env('OAUTH_KEY')
 OAUTH_SECRET = env('OAUTH_SECRET')
-OAUTH_SCOPE = env('OAUTH_SCOPE', 'https://www.googleapis.com/auth/userinfo.email')  # noqa
-OAUTH_BASE_URL = env('OAUTH_BASE_URL', 'https://www.googleapis.com/oauth2/v1/')  # noqa
+OAUTH_SCOPE = env('OAUTH_SCOPE')
+OAUTH_BASE_URL = env('OAUTH_BASE_URL')
 OAUTH_REQUEST_TOKEN_URL = env('OAUTH_REQUEST_TOKEN_URL')
 OAUTH_TOKEN_METHOD = env('OAUTH_TOKEN_METHOD', 'POST')
-OAUTH_TOKEN_URL = env('OAUTH_TOKEN_URL', 'https://accounts.google.com/o/oauth2/token')  # noqa
-OAUTH_AUTHORIZE_URL = env('OAUTH_AUTHORIZE_URL', 'https://accounts.google.com/o/oauth2/auth')  # noqa
+OAUTH_TOKEN_URL = env('OAUTH_TOKEN_URL')
+OAUTH_AUTHORIZE_URL = env('OAUTH_AUTHORIZE_URL')
 
 # Disable password-based authentication for SSO settings:
 PASSWORD_LOGIN = env_bool('PASSWORD_LOGIN', not OAUTH)
@@ -119,6 +119,14 @@ DEFAULT_LANGUAGE = env('DEFAULT_LANGUAGE', 'en')
 # When no language is assigned, OCR will include these options:
 OCR_DEFAULTS = ['eng']
 OCR_DEFAULTS = env_list('OCR_DEFAULTS', OCR_DEFAULTS)
+
+# Whether to use Google Vision API or not
+OCR_VISION_API = env_bool('OCR_VISION_API', False)
+
+# Microservice for tesseract
+OCR_SERVICE = 'recognize-text:50000'
+OCR_SERVICE = env('OCR_SERVICE', OCR_SERVICE)
+
 
 # Language whitelist
 LANGUAGES = ['en', 'fr', 'de', 'ru', 'es', 'nl', 'ro', 'ka', 'ar', 'tr', 'lb',
@@ -140,9 +148,13 @@ ANALYZE_IP = env_bool('ANAYZE_IP', True)
 ANALYZE_IBAN = env_bool('ANAYZE_IBAN', True)
 
 # gRPC extractor services
-POLYGLOT_SERVICE = env('POLYGLOT_SERVICE', 'extract-polyglot:50000')
-SPACY_SERVICE = env('SPACY_SERVICE', 'extract-spacy:50000')
+ENTITIES_SERVICE = env('ENTITIES_SERVICE', 'extract-entities:50000')
+COUNTRIES_SERVICE = None  # 'extract-countries:50000'
+COUNTRIES_SERVICE = env('COUNTRIES_SERVICE', COUNTRIES_SERVICE)
 
+# general gRPC settings
+GRPC_LB_POLICY = env('GRPC_LB_POLICY', 'round_robin')
+GRPC_CONN_AGE = int(env('GRPC_CONN_AGE', 500))  # ms
 
 ##############################################################################
 # E-mail settings
@@ -180,7 +192,7 @@ COLLECTIONS_INDEX = env('COLLECTIONS_INDEX', COLLECTIONS_INDEX)
 
 
 # Disable delayed processing via queue
-EAGER = env_bool('EAGER', False)
+EAGER = env_bool('EAGER', DEBUG)
 QUEUE_PREFIX = env('QUEUE_PREFIX', APP_NAME)
 QUEUE_NAME = '%s_worker' % QUEUE_PREFIX
 QUEUE_ROUTING_KEY = 'worker.process'

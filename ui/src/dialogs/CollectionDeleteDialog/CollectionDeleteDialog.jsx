@@ -1,12 +1,10 @@
-import React, {Component} from "react";
-import queryString from 'query-string';
+import React, { Component } from "react";
 import { Alert, Intent } from "@blueprintjs/core";
 import { defineMessages, FormattedMessage, injectIntl } from "react-intl";
 import { withRouter } from "react-router";
 import { connect } from "react-redux";
 
 import { deleteCollection } from "src/actions";
-
 
 const messages = defineMessages({
   button_confirm: {
@@ -31,12 +29,10 @@ class CollectionDeleteDialog extends Component {
   }
 
   async onDelete() {
-    const { collection, history } = this.props;
-    this.props.deleteCollection(collection);
-    history.push({
-      pathname: '/cases',
-      search: queryString.stringify({'_deleted': collection.id})
-    });
+    const {collection, history} = this.props;
+    const path = collection.casefile ? '/cases' : '/sources';
+    await this.props.deleteCollection(collection);
+    history.push({ pathname: path });
   }
 
   render() {
@@ -51,7 +47,7 @@ class CollectionDeleteDialog extends Component {
              onCancel={this.props.toggleDialog}
              onConfirm={this.onDelete}>
         <FormattedMessage id="collection.delete.question"
-                          defaultMessage="Are you sure you want to delete all contained items?" />
+                          defaultMessage="Are you sure you want to delete all contained items?"/>
       </Alert>
     );
   }

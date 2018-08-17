@@ -1,4 +1,4 @@
-version: "2"
+version: "3.2"
 
 services:
   postgres:
@@ -17,7 +17,6 @@ services:
     restart: on-failure
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
-      - elasticsearch-log:/var/log
 
   rabbitmq:
     image: rabbitmq
@@ -26,37 +25,43 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
 
   convert-document:
-    build: services/convert-document
+    image: alephdata/aleph-convert-document
     restart: on-failure
     tmpfs:
       - /tmp
       - /root/.config
-    mem_limit: 1g
     expose:
       - 3000
 
-  extract-polyglot:
-    build: services/extract-polyglot
+  extract-entities:
+    image: alephdata/aleph-extract-entities
     restart: on-failure
     expose:
       - 50000
-  
-  extract-spacy:
-    build: services/extract-spacy
+
+  extract-countries:
+    image: alephdata/aleph-extract-countries
+    restart: on-failure
+    expose:
+      - 50000
+
+  recognize-text:
+    image: alephdata/aleph-recognize-text
     restart: on-failure
     expose:
       - 50000
 
   app:
-    build: .
+    image: alephdata/aleph
     command: /bin/bash
     links:
       - postgres
       - elasticsearch
       - rabbitmq
       - convert-document
-      - extract-polyglot
-      - extract-spacy
+      - extract-entities
+      - extract-countries
+      - recognize-text
     tmpfs: /tmp
     volumes:
       - archive-data:/data
@@ -66,16 +71,14 @@ services:
     environment:
       ALEPH_DEBUG: 'true'
       ALEPH_SECRET_KEY: 'development'
-      ALEPH_CACHE: 'false'
       ALEPH_OAUTH: 'false'
-      ALEPH_EAGER: 'true'
       ALEPH_ARCHIVE_TYPE: 'file'
     env_file:
       - aleph.env
 
   api:
-    build: .
-    command: python aleph/manage.py runserver -h 0.0.0.0 -p 5000
+    image: alephdata/aleph
+    command: python3 aleph/manage.py runserver -h 0.0.0.0 -p 5000
     expose:
       - 5000
     ports:
@@ -86,8 +89,9 @@ services:
       - elasticsearch
       - rabbitmq
       - convert-document
-      - extract-polyglot
-      - extract-spacy
+      - extract-entities
+      - extract-countries
+      - recognize-text
     tmpfs: /tmp
     volumes:
       - archive-data:/data
@@ -96,14 +100,12 @@ services:
     environment:
       ALEPH_DEBUG: 'true'
       ALEPH_SECRET_KEY: 'development'
-      ALEPH_CACHE: 'false'
-      ALEPH_EAGER: 'true'
       ALEPH_ARCHIVE_TYPE: 'file'
     env_file:
       - aleph.env
   
   ui:
-    build: ui
+    image: alephdata/aleph-ui
     links:
       - api
     command: npm run start
@@ -122,6 +124,5 @@ services:
 volumes:
   archive-data: {}
   elasticsearch-data: {}
-  elasticsearch-log: {}
   postgres-data: {}
   rabbitmq-data: {}

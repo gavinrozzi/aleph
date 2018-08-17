@@ -8,7 +8,6 @@ import { SortableTH, ErrorSection } from 'src/components/common';
 
 import './EntityTable.css';
 
-
 const messages = defineMessages({
   column_name: {
     id: 'entity.column.name',
@@ -40,34 +39,35 @@ class EntityTable extends Component {
 
   constructor(props) {
     super(props);
-    this.state = {result: props.result};
+    this.state = {
+      result: props.result
+    };
   }
 
   static getDerivedStateFromProps(nextProps, prevState) {
     const { result } = nextProps;
-    return (result.total !== undefined || result.isError) ? { result } : null;
+    return (!result.isLoading) ? { result } : null;
   }
 
-  sortColumn(field) {
+  sortColumn(newField) {
     const { query, updateQuery } = this.props;
-    const { field: sortedField, desc } = query.getSort();
+    const { field: currentField, direction } = query.getSort();
     // Toggle through sorting states: ascending, descending, or unsorted.
-    let newQuery;
-    if (sortedField !== field) {
-      newQuery = query.sortBy(field, false);
+    if (currentField !== newField) {
+      return updateQuery(query.sortBy(newField, 'asc'));
     } else {
-      if (!desc) {
-        newQuery = query.sortBy(field, true);
+      if (direction === 'asc') {
+        updateQuery(query.sortBy(currentField, 'desc'));
       } else {
-        newQuery = query.sortBy(null);
+        updateQuery(query.sortBy(currentField, undefined));
       }
     }
-    updateQuery(newQuery);
   }
 
   render() {
-    const { query, intl, location, history } = this.props;
+    const { query, intl, location } = this.props;
     const { hideCollection = false, documentMode = false } = this.props;
+    const { updateSelection, selection } = this.props;
     const isLoading = this.props.result.total === undefined;
     const { result } = this.state;
 
@@ -79,11 +79,12 @@ class EntityTable extends Component {
       return null;
     }
 
-    const TH = ({ sortable, field, ...otherProps }) => {
-      const { field: sortedField, desc } = query.getSort();
+    const TH = ({ sortable, field, className, ...otherProps }) => {
+      const { field: sortedField, direction } = query.getSort();
       return (
         <SortableTH sortable={sortable}
-                    sorted={sortedField === field && (desc ? 'desc' : 'asc')}
+                    className={className}
+                    sorted={sortedField === field && (direction === 'desc' ? 'desc' : 'asc')}
                     onClick={() => this.sortColumn(field)}
                     {...otherProps}>
           {intl.formatMessage(messages[`column_${field}`])}
@@ -95,17 +96,18 @@ class EntityTable extends Component {
       <table className="EntityTable data-table">
         <thead>
           <tr>
+            {updateSelection && (<th className="select"/>)}
             <TH field="name" className="wide" sortable={true} />
             {!hideCollection && 
               <TH field="collection_id" />
             }
-            <TH field="schema" />
+            <TH className='header-schema visible-md-none' field="schema" sortable={true} />
             {!documentMode && (
-              <TH field="countries" sortable={true} />
+              <TH className='header-country' field="countries" sortable={true} />
             )}
-            <TH field="dates" sortable={true} />
+            <TH className='header-dates' field="dates" sortable={true} />
             {documentMode && (
-              <TH field="file_size" sortable={true} />
+              <TH className='header-size' field="file_size" sortable={true} />
             )}
           </tr>
         </thead>
@@ -113,10 +115,11 @@ class EntityTable extends Component {
           {result.results !== undefined && result.results.map(entity =>
             <EntityTableRow key={entity.id}
                             entity={entity}
+                            location={location}
                             hideCollection={hideCollection}
                             documentMode={documentMode}
-                            location={location}
-                            history={history} />
+                            updateSelection={updateSelection}
+                            selection={selection} />
           )}
         </tbody>
       </table>

@@ -161,7 +161,7 @@ class EntityCreateSchema(EntityUpdateSchema):
     collection_id = String(required=True)
     foreign_id = String()
 
-    @pre_load()
+    @pre_load
     def flatten_collection(self, data):
         flatten_id(data, 'collection_id', 'collection')
 
@@ -172,9 +172,9 @@ class DocumentParentSchema(Schema):
 
 
 class DocumentUpdateSchema(Schema):
-    countries = List(Country())
     title = String(allow_none=True)
     summary = String(allow_none=True)
+    countries = List(Country())
     languages = List(Language())
     keywords = List(String(validate=Length(min=1, max=5000)))
     date = PartialDate(allow_none=True)

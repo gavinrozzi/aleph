@@ -4,8 +4,10 @@ from collections import defaultdict
 
 from aleph.core import celery, db
 from aleph.model import Document, DocumentTag
+from aleph.index.core import records_index
 from aleph.index.records import index_records, clear_records
 from aleph.index.entities import delete_entity, index_single
+from aleph.index.util import refresh_index
 
 log = logging.getLogger(__name__)
 MAX_TAGS_PER_DOCUMENT = 1000
@@ -23,6 +25,8 @@ def index_document_id(document_id):
 
 def generate_tags(document):
     """Transform document tag objects into normalized tag snippets."""
+    if document.status == Document.STATUS_PENDING:
+        return []
     tags = defaultdict(set)
     q = db.session.query(DocumentTag)
     q = q.filter(DocumentTag.document_id == document.id)
@@ -41,10 +45,6 @@ def generate_tags(document):
 
 
 def index_document(document):
-    if document.status == Document.STATUS_PENDING:
-        delete_entity(document.id)
-        return
-
     name = document.name
     log.info("Index document [%s]: %s", document.id, name)
     data = {
@@ -103,3 +103,4 @@ def index_document(document):
 def delete_document(document_id):
     clear_records(document_id)
     delete_entity(document_id)
+    refresh_index(index=records_index())

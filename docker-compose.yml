@@ -14,7 +14,6 @@ services:
     image: alephdata/platform-elasticsearch:2.1.4
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
-      - elasticsearch-log:/var/log
 
   rabbitmq:
     image: rabbitmq
@@ -23,7 +22,7 @@ services:
       - rabbitmq-data:/var/lib/rabbitmq
 
   convert-document:
-    build: services/convert-document
+    image: alephdata/aleph-convert-document
     restart: on-failure
     tmpfs:
       - /tmp
@@ -32,22 +31,29 @@ services:
     expose:
       - 3000
 
-  extract-polyglot:
-    build: services/extract-polyglot
+  extract-entities:
+    image: alephdata/aleph-extract-entities
+    restart: on-failure
+    mem_limit: 4g
+    expose:
+      - 50000
+
+  extract-countries:
+    image: alephdata/aleph-extract-countries
     restart: on-failure
     mem_limit: 2g
     expose:
       - 50000
   
-  extract-spacy:
-    build: services/extract-spacy
+  recognize-text:
+    image: alephdata/aleph-recognize-text
     restart: on-failure
     mem_limit: 2g
     expose:
       - 50000
 
   worker:
-    build: .
+    image: alephdata/aleph
     command: celery -A aleph.queues -B -c 4 -l INFO worker
     restart: on-failure
     links:
@@ -55,8 +61,9 @@ services:
       - elasticsearch
       - rabbitmq
       - convert-document
-      - extract-polyglot
-      - extract-spacy
+      - extract-entities
+      - extract-countries
+      - recognize-text
     tmpfs:
       - /tmp
     volumes:
@@ -66,15 +73,16 @@ services:
       - aleph.env
   
   shell:
-    build: .
+    image: alephdata/aleph
     command: /bin/bash
     links:
       - postgres
       - elasticsearch
       - rabbitmq
       - convert-document
-      - extract-polyglot
-      - extract-spacy
+      - extract-entities
+      - extract-countries
+      - recognize-text
       - worker
     tmpfs:
       - /tmp
@@ -86,7 +94,7 @@ services:
       - aleph.env
 
   beat:
-    build: .
+    image: alephdata/aleph
     command: celery -A aleph.queues beat -s /var/lib/celerybeat-schedule.db
     links:
       - postgres
@@ -94,8 +102,9 @@ services:
       - rabbitmq
       - worker
       - convert-document
-      - extract-polyglot
-      - extract-spacy
+      - extract-entities
+      - extract-countries
+      - recognize-text
     tmpfs:
       - /tmp
     volumes:
@@ -104,7 +113,7 @@ services:
       - aleph.env
 
   api:
-    build: .
+    image: alephdata/aleph
     command: gunicorn -w 8 -b 0.0.0.0:8000 --log-level info --log-file /var/log/gunicorn.log aleph.manage:app
     expose:
       - 8000
@@ -121,28 +130,14 @@ services:
       - aleph.env
 
   ui:
-    build: ui
-    command: /bin/bash -c "npm run build; tail -f /dev/null"
-    volumes:
-      - assets:/alephui/build
-    environment:
-      REACT_APP_API_ENDPOINT: '/api/2'
-
-  web:
-    image: nginx:alpine
+    image: alephdata/aleph-ui-production
     links:
       - api
-      - ui
     ports:
       - "8080:8080"
-    volumes:
-      - assets:/assets
-      - "./contrib/proxy.conf:/etc/nginx/nginx.conf"
 
 volumes:
-  assets: {}
   archive-data: {}
   postgres-data: {}
   rabbitmq-data: {}
   elasticsearch-data: {}
-  elasticsearch-log: {}

@@ -22,7 +22,7 @@ const messages = defineMessages({
     defaultMessage: 'Sign out',
   },
   signin: {
-    id: 'nav.sigin',
+    id: 'nav.signin',
     defaultMessage: 'Sign in / Register',
   }
 });
@@ -52,7 +52,7 @@ class AuthButtons extends Component {
 
     if (session.loggedIn) {
       return (
-          <span className="AuthButtons">
+        <span className="AuthButtons">
           <Popover content={
             <Menu>
               <Link to="/notifications" className="pt-menu-item">
@@ -70,7 +70,6 @@ class AuthButtons extends Component {
               <FormattedMessage id="nav.profile" defaultMessage="Profile"/>
             </Button>
           </Popover>
-
           <SettingsDialog isOpen={this.state.settingsIsOpen} toggleDialog={this.toggleSettings} />
         </span>
       )
@@ -79,10 +78,10 @@ class AuthButtons extends Component {
     if (auth.password_login_uri || auth.oauth_uri) {
       return (
           <span className="AuthButtons">
-          <Menu className='menu-item-width' key='signin'>
-            <MenuItem icon='log-in' onClick={this.toggleAuthentication} text={intl.formatMessage(messages.signin)} />
             <AuthenticationDialog auth={auth} isOpen={this.state.isSignupOpen} toggleDialog={this.toggleAuthentication} />
-          </Menu>
+            <Button icon='log-in' className='pt-minimal' onClick={this.toggleAuthentication}>
+              <FormattedMessage id="nav.signin" defaultMessage="Sign in / Register"/>
+            </Button>
         </span>
       );
     }

@@ -23,7 +23,7 @@ class EntityLabel extends Component {
   }
 
   render() {
-    const { entity, icon = false, truncate } = this.props;
+    const { entity, icon = false, documentMode = false, truncate } = this.props;
     if (entity === undefined) {
       return null;
     }
@@ -40,6 +40,12 @@ class EntityLabel extends Component {
       text = truncateText(text, truncate);
     }
 
+    if (documentMode) {
+      text = fileName || text;
+    }
+
+    let entityClassName = entity.status === 'pending' ? 'EntityLabel disabled' : 'EntityLabel';
+
     if (!text || !text.length || text.length < 1) {
       return (
         <span className='EntityLabel untitled'>
@@ -51,7 +57,7 @@ class EntityLabel extends Component {
     }
     
     return (
-      <span className='EntityLabel' title={title || entityName}>
+      <span className={entityClassName} title={title || entityName}>
         {icon && <Schema.Icon schema={schema}/>}
         {icon && ' '}
         {text}
@@ -93,14 +99,14 @@ class EntityLink extends Component {
   }
 
   render() {
-    const { entity, className, icon, truncate } = this.props;
-    if (!entity || !entity.links || !entity.schemata) {
-      return <Entity.Label entity={entity} icon={icon} truncate={truncate}/>;
+    const { entity, className } = this.props;
+    if (!entity || !entity.links || !entity.schemata || entity.status === 'pending') {
+      return <Entity.Label {...this.props} />;
     }
 
     return (
       <a onClick={this.onClick} className={c('EntityLink', className)}>
-        <Entity.Label entity={entity} icon={icon} truncate={truncate} />
+        <Entity.Label {...this.props} />
       </a>
     );
   }
@@ -115,14 +121,12 @@ class EntityLoad extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    if (prevProps.id !== this.props.id) {
-      this.fetchIfNeeded();
-    }
+    this.fetchIfNeeded();
   }
 
   fetchIfNeeded() {
     const { id, entity } = this.props;
-    if (entity.id === undefined && !entity.isLoading) {
+    if (entity.shouldLoad) {
       this.props.fetchEntity({ id });
     }
   }

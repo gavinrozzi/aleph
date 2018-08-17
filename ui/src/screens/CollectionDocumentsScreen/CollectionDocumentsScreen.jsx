@@ -2,40 +2,44 @@ import React, { Component } from 'react';
 import { connect } from "react-redux";
 
 import { Breadcrumbs } from 'src/components/common';
-import { Toolbar, DocumentUploadButton, DocumentFolderButton, CollectionSearch } from 'src/components/Toolbar';
+import { Toolbar, CollectionSearch } from 'src/components/Toolbar';
+import DocumentManager from 'src/components/Document/DocumentManager';
 import Screen from 'src/components/Screen/Screen';
 import LoadingScreen from 'src/components/Screen/LoadingScreen';
+import ErrorScreen from 'src/components/Screen/ErrorScreen';
 import CaseContext from "src/components/Case/CaseContext";
-import { fetchCollection } from "src/actions";
+import Query from 'src/app/Query';
+import { fetchCollection, deleteDocument } from "src/actions";
 import { selectCollection } from "src/selectors";
-import EntitySearch from "src/components/EntitySearch/EntitySearch";
 
 
 class CollectionDocumentsScreen extends Component {
-  async componentDidMount() {
-    const {collectionId} = this.props;
-    this.props.fetchCollection({id: collectionId});
+
+  componentDidMount() {
+    this.fetchIfNeeded();
   }
 
   componentDidUpdate(prevProps) {
-    const {collectionId} = this.props;
-    if (collectionId !== prevProps.collectionId) {
+    this.fetchIfNeeded();
+  }
+
+  fetchIfNeeded() {
+    const {collectionId, collection} = this.props;
+    if (collection.shouldLoad) {
       this.props.fetchCollection({id: collectionId});
     }
   }
 
   render() {
-    const { collection } = this.props;
+    const { collection, query } = this.props;
 
-    if (collection === undefined || collection.id === undefined) {
-      return <LoadingScreen />;
+    if (collection.isError) {
+      return <ErrorScreen error={collection.error} />;
     }
 
-    const context = {
-      'filter:collection_id': collection.id,
-      'filter:schemata': 'Document',
-      'empty:parent': true
-    };
+    if (collection.id === undefined || collection.isLoading) {
+      return <LoadingScreen />;
+    }
 
     return (
       <Screen title={collection.label}
@@ -43,15 +47,9 @@ class CollectionDocumentsScreen extends Component {
               className='CaseDocumentsScreen'>
         <CaseContext collection={collection} activeTab='Documents'>
           <Toolbar>
-            <div className="pt-button-group">
-              <DocumentFolderButton collection={collection} />
-              <DocumentUploadButton collection={collection} />
-            </div>
             <CollectionSearch collection={collection} />
           </Toolbar>
-          <EntitySearch context={context}
-                        hideCollection={true}
-                        documentMode={true} />
+          <DocumentManager query={query} collection={collection} />
         </CaseContext>
       </Screen>
     );
@@ -59,12 +57,21 @@ class CollectionDocumentsScreen extends Component {
 }
 
 const mapStateToProps = (state, ownProps) => {
-  const { collectionId } = ownProps.match.params;
+  const { location, match } = ownProps;
+  const { collectionId } = match.params;
+  const context = {
+    'filter:collection_id': collectionId,
+    'filter:schemata': 'Document',
+    'empty:parent': true
+  };
+  const query = Query.fromLocation('search', location, context, 'document').limit(50);
+
   return {
     collectionId,
-    collection: selectCollection(state, collectionId)
+    collection: selectCollection(state, collectionId),
+    query: query
   };
 };
 
-CollectionDocumentsScreen = connect(mapStateToProps, {fetchCollection})(CollectionDocumentsScreen);
+CollectionDocumentsScreen = connect(mapStateToProps, {fetchCollection, deleteDocument})(CollectionDocumentsScreen);
 export default CollectionDocumentsScreen;

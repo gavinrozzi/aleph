@@ -5,8 +5,8 @@ import { withRouter } from 'react-router';
 import { defineMessages, injectIntl } from 'react-intl';
 
 import Query from 'src/app/Query';
-import {queryEntities} from 'src/actions';
-import {selectEntitiesResult} from 'src/selectors';
+import { queryEntities } from 'src/actions';
+import { selectEntitiesResult } from 'src/selectors';
 import EntityTable from 'src/components/EntityTable/EntityTable';
 import { SectionLoading, ErrorSection } from 'src/components/common';
 
@@ -39,16 +39,12 @@ class EntitySearch extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    // Check for a change of query, as unconditionally calling fetchIfNeeded
-    // could cause an infinite loop (if fetching fails).
-    if (!this.props.query.sameAs(prevProps.query)) {
-      this.fetchIfNeeded();
-    }
+    this.fetchIfNeeded();
   }
 
   fetchIfNeeded() {
-    const {query, result, queryEntities} = this.props;
-    if ((result.pages === undefined || (result.status === 'error'))) {
+    const { query, result, queryEntities } = this.props;
+    if (result.shouldLoad) {
       queryEntities({ query });
     }
   }
@@ -72,8 +68,9 @@ class EntitySearch extends Component {
   }
 
   render() {
-    const {query, result, intl, className} = this.props;
+    const { query, result, intl, className } = this.props;
     const isEmpty = !query.hasQuery();
+
     return (
       <div className={className}>
         {result.total === 0 && (
@@ -90,10 +87,13 @@ class EntitySearch extends Component {
           </section>
         )}
         <EntityTable query={query}
+                     result={result}
                      documentMode={this.props.documentMode}
                      hideCollection={this.props.hideCollection}
                      updateQuery={this.updateQuery}
-                     result={result} />
+                     updateSelection={this.props.updateSelection}
+                     selection={this.props.selection} />
+
         {!result.isLoading && result.next && (
           <Waypoint
             onEnter={this.getMoreResults}
@@ -101,7 +101,7 @@ class EntitySearch extends Component {
             scrollableAncestor={window}
           />
         )}
-        {(result.isLoading || result.total === null) && (
+        {result.isLoading && (
           <SectionLoading/>
         )}
       </div>
@@ -119,11 +119,9 @@ const mapStateToProps = (state, ownProps) => {
     ...context,
   };
   const searchQuery = query !== undefined ? query : Query.fromLocation('search', location, contextWithDefaults, prefix);
-  const result = selectEntitiesResult(state, searchQuery);
-
   return {
     query: searchQuery,
-    result,
+    result: selectEntitiesResult(state, searchQuery)
   };
 };
 
